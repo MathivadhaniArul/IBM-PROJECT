@@ -1,0 +1,138 @@
+import os, getpass
+from pandas import read_csv
+
+credentials = {
+    "url": "https://us-south.ml.cloud.ibm.com",
+    "apikey": getpass.getpass("Please enter your WML api key (hit enter): ")
+}
+try:
+    project_id = os.environ["PROJECT_ID"]
+except KeyError:
+    project_id = input("Please enter your project_id (hit enter): ")
+
+project_id
+'e4250a13-840d-46cb-9645-e6be9ffdf618'
+import os, types
+import pandas as pd
+from ibm_boto3 import client
+from botocore.client import Config
+import ibm_boto3
+
+def _iter_(self): return 0
+cos_client = ibm_boto3.client(service_name='s3',
+    ibm_api_key_id='IHfj7CVZR-Tki-kFU80MhiFCL-ZJfNxMGrBWngMPXSyY',
+    ibm_auth_endpoint="https://iam.cloud.ibm.com/oidc/token",
+    config=Config(signature_version='oauth'),
+    endpoint_url='https://s3.private.us-south.cloud-object-storage.appdomain.cloud'
+)
+
+bucket = 'bucket-goauk8csoaq2uk7'
+object_key = 'train.csv'
+
+body = cos_client.get_object(Bucket=bucket, Key=object_key)['Body']
+body = cos_client.get_object(Bucket=bucket, Key=object_key)['Body']
+
+if not hasattr(body, "_iter"): body.iter_ = types.MethodType(_iter_, body)
+
+train_data = pd.read_csv(body)
+train_data.head(5)
+Cus. ID	Gender	Review	Feature	Sentiment
+0	C001	M	The screen resolution is too low for modern apps.	display quality	Negative
+1	C002	M	Very happy with the battery performance.	battery life	Positive
+2	C003	F	The display quality is disappointing.	display quality	Negative
+3	C004	M	Excellent speed while multitasking.	performance speed	Positive
+4	C005	F	Not happy with how fast the battery drains.	battery life	Negative
+import os, types
+import pandas as pd
+from botocore.client import Config
+import ibm_boto3
+import matplotlib.pyplot as plt
+
+def _iter_(self): return 0
+
+cos_client = ibm_boto3.client(service_name='s3',
+    ibm_api_key_id='IHfj7CVZR-Tki-kFU80MhiFCL-ZJfNxMGrBWngMPXSyY',
+    ibm_auth_endpoint="https://iam.cloud.ibm.com/oidc/token",
+    config=Config(signature_version='oauth'),
+    endpoint_url='https://s3.private.us-south.cloud-object-storage.appdomain.cloud'
+)
+bucket = 'bucket-goauk8csoaq2uk7'
+object_key = 'test.csv'
+
+body = cos_client.get_object(Bucket=bucket, Key=object_key)['Body']
+
+# add missing _iter_ method, so pandas accepts body as file-like object
+if not hasattr(body, "_iter"): body.iter_ = types.MethodType(_iter_, body)
+
+test_data = pd.read_csv(body)
+test_data.head(5)
+Cus. ID	Gender	Review	Feature	Sentiment
+0	C001	M	Not happy with how fast the battery drains.	battery life	Negative
+1	C002	M	Performance speed is very disappointing.	performance speed	Negative
+2	C003	F	I need to charge the phone multiple times a day.	battery life	Negative
+3	C004	M	Display quality exceeded my expectations.	display quality	Positive
+4	C005	M	The camera captures vibrant and detailed pictu...	camera quality	Positive
+result = (
+    test_data[test_data["Sentiment"] == "Positive"]   # keep only Positive rows
+    .groupby("Feature")["Sentiment"]                  # group by feature
+    .count()                                          # count the rows
+)
+customer = list(test_data.Feature)
+plt.bar(result.index, result.values)
+plt.title('Customer Satisfaction')
+plt.xlabel('Features')
+plt.ylabel('satisfaction')
+plt.show()
+
+print("HIGHLY APPRECIATED FEATURE:",max(result.index))
+print("LEAST APPRECIATED FEATURE:",min(result.index))
+HIGHLY APPRECIATED FEATURE: performance speed
+LEAST APPRECIATED FEATURE: battery life
+from ibm_watson_machine_learning.foundation_models.utils.enums import ModelTypes
+
+model_id = ModelTypes.FLAN_UL2
+
+satisfaction_instruction = """
+Identify the product feature being discussed in the following customer reviews. Choose only one of the following features: camera quality, display quality, battery life, or performance speed.\n
+
+review: The pictures are blurry and lack detail.\n
+feature: camera quality\n\n
+
+review: I need to charge the phone multiple times a day.\n
+feature: battery life\n\n
+
+review: Apps open instantly and the phone feels smooth.\n
+feature: performance speed\n\n
+
+review: The display quality is top-notch and very vibrant.\n
+feature: display quality\n\n
+"""
+from ibm_watson_machine_learning.metanames import GenTextParamsMetaNames as GenParams
+
+parameters = {
+    GenParams.MAX_NEW_TOKENS: 20
+}
+
+from ibm_watson_machine_learning.foundation_models import Model
+
+model = Model(
+    model_id=model_id,
+    params=parameters,
+    credentials=credentials,
+    project_id=project_id
+)
+/opt/conda/envs/Python-RT24.1/lib/python3.11/site-packages/ibm_watson_machine_learning/foundation_models/utils/utils.py:273: LifecycleWarning: Model 'google/flan-ul2' is in deprecated state from 2025-05-28 until 2025-07-30. IDs of alternative models: None. Further details: https://dataplatform.cloud.ibm.com/docs/content/wsj/analyze-data/fm-model-lifecycle.html?context=wx&audience=wdp
+  warnings.warn(default_warning_template.format(
+import time
+
+results = []
+review = list(train_data.Review)
+feature = list(train_data.Feature)
+
+for input_text in review:
+    prompt = " ".join([satisfaction_instruction, input_text])
+    results.append(model.generate_text(prompt=prompt))
+    time.sleep(0.6)  # Sleep to avoid hitting the rate limit
+    review = list(train_data.Review)
+    feature = list(train_data.Feature) 
+
