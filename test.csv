@@ -1,0 +1,51 @@
+Cus. ID,Gender,Review,Feature,Sentiment
+C001,M,Not happy with how fast the battery drains.,battery life,Negative
+C002,M,Performance speed is very disappointing.,performance speed,Negative
+C003,F,I need to charge the phone multiple times a day.,battery life,Negative
+C004,M,Display quality exceeded my expectations.,display quality,Positive
+C005,M,The camera captures vibrant and detailed pictures.,camera quality,Positive
+C006,M,I'm very impressed with the camera quality.,camera quality,Positive
+C007,F,Charges quickly and the battery lasts long.,battery life,Positive
+C008,M,Battery dies quickly even with light use.,battery life,Negative
+C009,M,The phone freezes often and responds slowly.,performance speed,Negative
+C010,M,Battery life is impressive even with heavy use.,battery life,Positive
+C011,F,"Superb display quality, even under sunlight.",display quality,Positive
+C012,F,Camera quality is outstanding for this price range.,camera quality,Positive
+C013,M,Gaming is smooth with no lag at all.,performance speed,Positive
+C014,M,Takes too long to open apps.,performance speed,Negative
+C015,F,Loving the high-resolution screen display.,display quality,Positive
+C016,F,Loving the high-resolution screen display.,display quality,Positive
+C017,F,Battery life lasts all day easily.,battery life,Positive
+C018,F,Screen lacks sharpness and brightness.,display quality,Negative
+C019,M,"Not suitable for heavy usage, too slow.",performance speed,Negative
+C020,M,Very happy with the battery performance.,battery life,Positive
+C021,M,The display quality is disappointing.,display quality,Negative
+C022,F,Battery life is impressive even with heavy use.,battery life,Positive
+C023,M,I'm very impressed with the camera quality.,camera quality,Positive
+C024,M,The performance speed is super fast.,performance speed,Positive
+C025,F,Camera quality is poor and grainy.,camera quality,Negative
+C026,M,Loving the crisp images from the camera.,camera quality,Positive
+C027,M,Loving the high-resolution screen display.,display quality,Positive
+C028,M,The display quality is top-notch and very vibrant.,display quality,Positive
+C029,F,Performance speed is very disappointing.,performance speed,Negative
+C030,M,Display quality exceeded my expectations.,display quality,Positive
+C031,F,Not happy with how fast the battery drains.,battery life,Negative
+C032,F,Excellent speed while multitasking.,performance speed,Positive
+C033,M,Display is crisp and colors look great.,display quality,Positive
+C034,M,The screen resolution is too low for modern apps.,display quality,Negative
+C035,F,Battery life is a major downside of this phone.,battery life,Negative
+C036,F,Very happy with the battery performance.,battery life,Positive
+C037,F,Battery life is a major downside of this phone.,battery life,Negative
+C038,M,Battery dies quickly even with light use.,battery life,Negative
+C039,M,The performance speed is super fast.,performance speed,Positive
+C040,M,Camera quality is not up to the mark.,camera quality,Negative
+C041,M,Performance is slow and laggy.,performance speed,Negative
+C042,M,Camera quality is outstanding for this price range.,camera quality,Positive
+C043,F,Camera quality is not up to the mark.,camera quality,Negative
+C044,F,The display quality is top-notch and very vibrant.,display quality,Positive
+C045,F,Screen lacks sharpness and brightness.,display quality,Negative
+C046,M,Colors look dull and washed out.,display quality,Negative
+C047,F,Loving the crisp images from the camera.,camera quality,Positive
+C048,F,Battery dies quickly even with light use.,battery life,Negative
+C049,M,Low light camera performance is very bad.,camera quality,Negative
+C050,F,Colors look dull and washed out.,display quality,Negative
