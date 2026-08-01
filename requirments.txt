@@ -1,0 +1,5 @@
+pandas>=1.5
+matplotlib>=3.5
+ibm-cos-sdk>=2.13
+ibm-watson-machine-learning>=1.0.335
+streamlit>=1.32
