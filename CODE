@@ -1,138 +1,185 @@
-import os, getpass
-from pandas import read_csv
+import io
+import logging
 
-credentials = {
-    "url": "https://us-south.ml.cloud.ibm.com",
-    "apikey": getpass.getpass("Please enter your WML api key (hit enter): ")
-}
-try:
-    project_id = os.environ["PROJECT_ID"]
-except KeyError:
-    project_id = input("Please enter your project_id (hit enter): ")
-
-project_id
-'e4250a13-840d-46cb-9645-e6be9ffdf618'
-import os, types
 import pandas as pd
-from ibm_boto3 import client
-from botocore.client import Config
-import ibm_boto3
+import streamlit as st
 
-def _iter_(self): return 0
-cos_client = ibm_boto3.client(service_name='s3',
-    ibm_api_key_id='IHfj7CVZR-Tki-kFU80MhiFCL-ZJfNxMGrBWngMPXSyY',
-    ibm_auth_endpoint="https://iam.cloud.ibm.com/oidc/token",
-    config=Config(signature_version='oauth'),
-    endpoint_url='https://s3.private.us-south.cloud-object-storage.appdomain.cloud'
+from feature_sentiment_analysis import (
+    VALID_FEATURES,
+    load_csv_from_cos,
+    analyze_satisfaction,
+    build_model,
+    predict_features,
+    score_predictions,
 )
 
-bucket = 'bucket-goauk8csoaq2uk7'
-object_key = 'train.csv'
+logging.basicConfig(level=logging.INFO)
 
-body = cos_client.get_object(Bucket=bucket, Key=object_key)['Body']
-body = cos_client.get_object(Bucket=bucket, Key=object_key)['Body']
-
-if not hasattr(body, "_iter"): body.iter_ = types.MethodType(_iter_, body)
-
-train_data = pd.read_csv(body)
-train_data.head(5)
-Cus. ID	Gender	Review	Feature	Sentiment
-0	C001	M	The screen resolution is too low for modern apps.	display quality	Negative
-1	C002	M	Very happy with the battery performance.	battery life	Positive
-2	C003	F	The display quality is disappointing.	display quality	Negative
-3	C004	M	Excellent speed while multitasking.	performance speed	Positive
-4	C005	F	Not happy with how fast the battery drains.	battery life	Negative
-import os, types
-import pandas as pd
-from botocore.client import Config
-import ibm_boto3
-import matplotlib.pyplot as plt
-
-def _iter_(self): return 0
-
-cos_client = ibm_boto3.client(service_name='s3',
-    ibm_api_key_id='IHfj7CVZR-Tki-kFU80MhiFCL-ZJfNxMGrBWngMPXSyY',
-    ibm_auth_endpoint="https://iam.cloud.ibm.com/oidc/token",
-    config=Config(signature_version='oauth'),
-    endpoint_url='https://s3.private.us-south.cloud-object-storage.appdomain.cloud'
+st.set_page_config(page_title="Review Feature & Sentiment Analysis", layout="wide")
+st.title(" Customer Review Feature & Sentiment Analysis")
+st.caption(
+    "Loads customer reviews, charts satisfaction by feature, and uses a "
+    "watsonx.ai foundation model to predict which feature each review discusses."
 )
-bucket = 'bucket-goauk8csoaq2uk7'
-object_key = 'test.csv'
 
-body = cos_client.get_object(Bucket=bucket, Key=object_key)['Body']
+for key in ["train_data", "test_data", "predictions_df"]:
+    if key not in st.session_state:
+        st.session_state[key] = None
 
-# add missing _iter_ method, so pandas accepts body as file-like object
-if not hasattr(body, "_iter"): body.iter_ = types.MethodType(_iter_, body)
+with st.sidebar:
+    st.header("1. watsonx.ai credentials")
+    wml_api_key = st.text_input("WML API key", type="password")
+    wml_url = st.text_input("WML URL", value="https://us-south.ml.cloud.ibm.com")
+    project_id = st.text_input("Project ID")
+    model_id = st.text_input("Model ID", value="google/flan-t5-xxl")
 
-test_data = pd.read_csv(body)
-test_data.head(5)
-Cus. ID	Gender	Review	Feature	Sentiment
-0	C001	M	Not happy with how fast the battery drains.	battery life	Negative
-1	C002	M	Performance speed is very disappointing.	performance speed	Negative
-2	C003	F	I need to charge the phone multiple times a day.	battery life	Negative
-3	C004	M	Display quality exceeded my expectations.	display quality	Positive
-4	C005	M	The camera captures vibrant and detailed pictu...	camera quality	Positive
-result = (
-    test_data[test_data["Sentiment"] == "Positive"]   # keep only Positive rows
-    .groupby("Feature")["Sentiment"]                  # group by feature
-    .count()                                          # count the rows
-)
-customer = list(test_data.Feature)
-plt.bar(result.index, result.values)
-plt.title('Customer Satisfaction')
-plt.xlabel('Features')
-plt.ylabel('satisfaction')
-plt.show()
+    st.divider()
+    st.header("2. Data source")
+    source = st.radio("Load train/test data from", ["Upload CSV files", "IBM COS bucket"])
 
-print("HIGHLY APPRECIATED FEATURE:",max(result.index))
-print("LEAST APPRECIATED FEATURE:",min(result.index))
-HIGHLY APPRECIATED FEATURE: performance speed
-LEAST APPRECIATED FEATURE: battery life
-from ibm_watson_machine_learning.foundation_models.utils.enums import ModelTypes
+    cos_creds = None
+    uploaded_train, uploaded_test = None, None
 
-model_id = ModelTypes.FLAN_UL2
+    if source == "IBM COS bucket":
+        cos_api_key = st.text_input("COS API key", type="password")
+        cos_bucket = st.text_input("COS bucket name")
+        cos_endpoint = st.text_input(
+            "COS endpoint URL",
+            value="https://s3.private.us-south.cloud-object-storage.appdomain.cloud",
+        )
+        cos_auth_endpoint = st.text_input(
+            "COS auth endpoint", value="https://iam.cloud.ibm.com/oidc/token"
+        )
+        if cos_api_key and cos_bucket:
+            cos_creds = {
+                "api_key": cos_api_key,
+                "bucket": cos_bucket,
+                "endpoint_url": cos_endpoint,
+                "auth_endpoint": cos_auth_endpoint,
+            }
+    else:
+        uploaded_train = st.file_uploader("train.csv", type="csv")
+        uploaded_test = st.file_uploader("test.csv", type="csv")
 
-satisfaction_instruction = """
-Identify the product feature being discussed in the following customer reviews. Choose only one of the following features: camera quality, display quality, battery life, or performance speed.\n
+    st.divider()
+    load_clicked = st.button("📥 Load data", use_container_width=True)
 
-review: The pictures are blurry and lack detail.\n
-feature: camera quality\n\n
 
-review: I need to charge the phone multiple times a day.\n
-feature: battery life\n\n
+if load_clicked:
+    try:
+        with st.spinner("Loading data..."):
+            if source == "IBM COS bucket":
+                if not cos_creds:
+                    st.error("Enter your COS API key and bucket name first.")
+                    st.stop()
+                st.session_state.train_data = load_csv_from_cos(cos_creds, "train.csv")
+                st.session_state.test_data = load_csv_from_cos(cos_creds, "test.csv")
+            else:
+                if not uploaded_train or not uploaded_test:
+                    st.error("Upload both train.csv and test.csv first.")
+                    st.stop()
+                st.session_state.train_data = pd.read_csv(io.BytesIO(uploaded_train.getvalue()))
+                st.session_state.test_data = pd.read_csv(io.BytesIO(uploaded_test.getvalue()))
+        st.session_state.predictions_df = None  # reset downstream results
+        st.success("Data loaded.")
+    except Exception as exc:
+        st.error(f"Failed to load data: {exc}")
 
-review: Apps open instantly and the phone feels smooth.\n
-feature: performance speed\n\n
+train_data = st.session_state.train_data
+test_data = st.session_state.test_data
 
-review: The display quality is top-notch and very vibrant.\n
-feature: display quality\n\n
-"""
-from ibm_watson_machine_learning.metanames import GenTextParamsMetaNames as GenParams
+if train_data is None or test_data is None:
+    st.info("Load train.csv and test.csv from the sidebar to get started.")
+    st.stop()
 
-parameters = {
-    GenParams.MAX_NEW_TOKENS: 20
-}
+col1, col2 = st.columns(2)
+with col1:
+    st.subheader("Train data preview")
+    st.dataframe(train_data.head(5), use_container_width=True)
+with col2:
+    st.subheader("Test data preview")
+    st.dataframe(test_data.head(5), use_container_width=True)
 
-from ibm_watson_machine_learning.foundation_models import Model
 
-model = Model(
-    model_id=model_id,
-    params=parameters,
-    credentials=credentials,
-    project_id=project_id
-)
-/opt/conda/envs/Python-RT24.1/lib/python3.11/site-packages/ibm_watson_machine_learning/foundation_models/utils/utils.py:273: LifecycleWarning: Model 'google/flan-ul2' is in deprecated state from 2025-05-28 until 2025-07-30. IDs of alternative models: None. Further details: https://dataplatform.cloud.ibm.com/docs/content/wsj/analyze-data/fm-model-lifecycle.html?context=wx&audience=wdp
-  warnings.warn(default_warning_template.format(
-import time
+st.header(" Satisfaction by feature")
 
-results = []
-review = list(train_data.Review)
-feature = list(train_data.Feature)
+if "Sentiment" not in test_data.columns or "Feature" not in test_data.columns:
+    st.warning("test.csv needs 'Sentiment' and 'Feature' columns for this chart.")
+else:
+    result = (
+        test_data[test_data["Sentiment"] == "Positive"]
+        .groupby("Feature")["Sentiment"]
+        .count()
+        .sort_values(ascending=False)
+    )
 
-for input_text in review:
-    prompt = " ".join([satisfaction_instruction, input_text])
-    results.append(model.generate_text(prompt=prompt))
-    time.sleep(0.6)  # Sleep to avoid hitting the rate limit
-    review = list(train_data.Review)
-    feature = list(train_data.Feature) 
+    if result.empty:
+        st.warning("No positive-sentiment rows found.")
+    else:
+        st.bar_chart(result)
+        m1, m2 = st.columns(2)
+        # Ranked by count via idxmax/idxmin — not alphabetically by name.
+        m1.metric(" Highly appreciated", result.idxmax(), f"{result.max()} positive reviews")
+        m2.metric(" Least appreciated", result.idxmin(), f"{result.min()} positive reviews")
 
+
+st.header("🤖 Predict feature from review text")
+
+if "Review" not in train_data.columns:
+    st.warning("train.csv needs a 'Review' column to run predictions.")
+else:
+    max_rows = len(train_data)
+    sample_size = st.slider(
+        "Number of reviews to run through the model",
+        min_value=1,
+        max_value=max_rows,
+        value=min(20, max_rows),
+        help="Each row is one call to watsonx.ai — start small to control cost/time.",
+    )
+
+    run_clicked = st.button(" Run prediction", type="primary")
+
+    if run_clicked:
+        if not wml_api_key or not project_id:
+            st.error("Enter your WML API key and Project ID in the sidebar first.")
+            st.stop()
+
+        credentials = {"url": wml_url, "apikey": wml_api_key}
+        subset = train_data.head(sample_size).copy()
+
+        progress_bar = st.progress(0.0, text="Starting...")
+
+        def _on_progress(done, total):
+            progress_bar.progress(done / total, text=f"Processed {done}/{total} reviews")
+
+        try:
+            with st.spinner("Calling watsonx.ai..."):
+                model = build_model(credentials, project_id, model_id=model_id)
+                predictions = predict_features(
+                    model, subset["Review"], progress_callback=_on_progress
+                )
+            subset["Predicted_Feature"] = predictions
+            st.session_state.predictions_df = subset
+            progress_bar.progress(1.0, text="Done")
+            st.success("Prediction complete.")
+        except Exception as exc:
+            st.error(f"Prediction failed: {exc}")
+
+    predictions_df = st.session_state.predictions_df
+    if predictions_df is not None:
+        if "Feature" in predictions_df.columns:
+            accuracy = (
+                predictions_df["Feature"].str.strip().str.lower()
+                == predictions_df["Predicted_Feature"]
+            ).mean()
+            st.metric("Accuracy", f"{accuracy * 100:.1f}%")
+
+        st.dataframe(predictions_df, use_container_width=True)
+
+        csv_bytes = predictions_df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            " Download predictions CSV",
+            data=csv_bytes,
+            file_name="train_predictions.csv",
+            mime="text/csv",
+        )
